@@ -23,22 +23,23 @@ class Train081801Cfg(LeggedRobotCfg):
         curriculum = False
 
     class init_state(LeggedRobotCfg.init_state):
-        # StackForce auto-grounding: lowest collision shape + 0.02 m clearance.
-        pos = [0.0, 0.0, 1]
+        # The calibrated stance has all four foot collision meshes at z=-0.14 m.
+        # Start with 0.02 m ground clearance and let the robot settle onto the plane.
+        pos = [0.0, 0.0, 0.16]
         rot = [0.0, 0.0, 0.0, 1.0]
         default_joint_angles = {
             "hip_joint": 0,
-            "knee_joint": -0.17,
-            "foot_joint": 0.8,
+            "knee_joint": -0.5765,
+            "foot_joint": 0.6092,
             "hip3_joint": 0,
-            "knee3_joint": 0.33,
-            "foot3_joint": 0.8,
+            "knee3_joint": 0.7132,
+            "foot3_joint": 0.6817,
             "hip2_joint": 0,
-            "knee2_joint": 0.25,
-            "foot2_joint": 0.8,
+            "knee2_joint": 0.5767,
+            "foot2_joint": 0.6110,
             "hip4_joint": 0,
-            "knee4_joint": -0.74,
-            "foot4_joint": 0.8,
+            "knee4_joint": -0.7137,
+            "foot4_joint": 0.6799,
         }
 
     class viewer(LeggedRobotCfg.viewer):
@@ -64,26 +65,26 @@ class Train081801Cfg(LeggedRobotCfg):
             "foot4_joint": 20,
         }
         damping = {
-            "hip_joint": 1,
-            "knee_joint": 1,
-            "foot_joint": 1,
-            "hip3_joint": 1,
-            "knee3_joint": 1,
-            "foot3_joint": 1,
-            "hip2_joint": 1,
-            "knee2_joint": 1,
-            "foot2_joint": 1,
-            "hip4_joint": 1,
-            "knee4_joint": 1,
-            "foot4_joint": 1,
+            "hip_joint": 2.0,
+            "knee_joint": 2.0,
+            "foot_joint": 2.0,
+            "hip3_joint": 2.0,
+            "knee3_joint": 2.0,
+            "foot3_joint": 2.0,
+            "hip2_joint": 2.0,
+            "knee2_joint": 2.0,
+            "foot2_joint": 2.0,
+            "hip4_joint": 2.0,
+            "knee4_joint": 2.0,
+            "foot4_joint": 2.0,
         }
-        action_scale = 0.5
+        action_scale = 0.25
         decimation = 4
 
     class asset(LeggedRobotCfg.asset):
         file = str(URDF_PATH)
         name = "train081801"
-        foot_name = "link"
+        foot_name = "foot"
         penalize_contacts_on = ["base_link"]
         terminate_after_contacts_on = ["base_link"]
         dof_names = ["hip_joint", "knee_joint", "foot_joint", "hip3_joint", "knee3_joint", "foot3_joint", "hip2_joint", "knee2_joint", "foot2_joint", "hip4_joint", "knee4_joint", "foot4_joint"]
@@ -101,36 +102,37 @@ class Train081801Cfg(LeggedRobotCfg):
         heading_command = False
 
         class ranges(LeggedRobotCfg.commands.ranges):
-            lin_vel_x = [-0.1, 0.1]
-            lin_vel_y = [-0.1, 0.1]
-            ang_vel_yaw = [-0.1, 0.1]
+            lin_vel_x = [0.0, 0.0]
+            lin_vel_y = [0.0, 0.0]
+            ang_vel_yaw = [0.0, 0.0]
 
     class domain_rand(LeggedRobotCfg.domain_rand):
-        randomize_friction = True
+        # Keep stage-0 deterministic until the nominal stance is stable.
+        randomize_friction = False
         friction_range = [0.6, 1.2]
         randomize_base_mass = False
         push_robots = False
 
     class rewards(LeggedRobotCfg.rewards):
         soft_dof_pos_limit = 0.9
-        base_height_target = 0.98
+        base_height_target = 0.14
 
         class scales(LeggedRobotCfg.rewards.scales):
             termination = 0
             tracking_lin_vel = 1
             tracking_ang_vel = 0.5
             lin_vel_z = -2
-            ang_vel_xy = -0.05
-            orientation = -1
-            torques = -0.00001
-            dof_vel = 0
-            dof_acc = -2.5e-7
+            ang_vel_xy = -0.2
+            orientation = -2
+            torques = -5e-5
+            dof_vel = -1e-3
+            dof_acc = -1e-6
             base_height = -1
-            feet_air_time = 1
+            feet_air_time = 0
             collision = -1
             feet_stumble = 0
-            action_rate = -0.01
-            stand_still = 0
+            action_rate = -0.08
+            stand_still = -0.5
             custom_reward = 0.0
 
     class normalization(LeggedRobotCfg.normalization):
@@ -142,7 +144,8 @@ class Train081801Cfg(LeggedRobotCfg):
             height_measurements = 5.0
 
     class noise(LeggedRobotCfg.noise):
-        add_noise = True
+        # Observation noise is introduced in later robustness stages.
+        add_noise = False
         noise_level = 1.0
 
     class sim(LeggedRobotCfg.sim):

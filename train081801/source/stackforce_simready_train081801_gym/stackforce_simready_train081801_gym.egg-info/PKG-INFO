@@ -2,8 +2,4 @@ Metadata-Version: 2.1
 Name: stackforce_simready_train081801_gym
 Version: 0.1.0
 Summary: StackForce SimReady Legged Gym export for train081801
-License: UNKNOWN
-Platform: UNKNOWN
 Requires-Python: >=3.8
-
-UNKNOWN
