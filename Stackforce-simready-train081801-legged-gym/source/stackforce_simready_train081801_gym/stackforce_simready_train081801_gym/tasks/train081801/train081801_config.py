@@ -12,10 +12,12 @@ class Train081801Cfg(LeggedRobotCfg):
         num_envs = 4096
         num_observations = 48
         num_actions = 12
-        termination_grace_time_s = 2.0
-        fail_to_terminal_time_s = 0.5
+        # The robot now starts close to the ground, so long fall-protection is
+        # unnecessary and would let failed poses keep collecting reward.
+        termination_grace_time_s = 0.3
+        fail_to_terminal_time_s = 0.15
         termination_contact_force_threshold = 20.0
-        fallen_projected_gravity_z = -0.35
+        fallen_projected_gravity_z = -0.6
 
     class terrain(LeggedRobotCfg.terrain):
         mesh_type = "plane"
@@ -23,8 +25,9 @@ class Train081801Cfg(LeggedRobotCfg):
         curriculum = False
 
     class init_state(LeggedRobotCfg.init_state):
-        # StackForce auto-grounding: lowest collision shape + 0.02 m clearance.
-        pos = [0.0, 0.0, 1]
+        # The nominal collision geometry extends about 0.128 m below the base.
+        # Start with roughly 0.03 m clearance instead of dropping from 1 m.
+        pos = [0.0, 0.0, 0.16]
         rot = [0.0, 0.0, 0.0, 1.0]
         default_joint_angles = {
             "hip_joint": 0,
@@ -43,8 +46,8 @@ class Train081801Cfg(LeggedRobotCfg):
 
     class viewer(LeggedRobotCfg.viewer):
         ref_env = 0
-        pos = [2.0, -2.2, 1.25]
-        lookat = [0.0, 0.0, 0.55]
+        pos = [1.0, -1.2, 0.65]
+        lookat = [0.0, 0.0, 0.15]
         rendered_envs_idx = [0]
 
     class control(LeggedRobotCfg.control):
@@ -77,13 +80,16 @@ class Train081801Cfg(LeggedRobotCfg):
             "knee4_joint": 1,
             "foot4_joint": 1,
         }
-        action_scale = 0.5
+        # With a 1.7 N*m URDF effort limit, 0.5 rad targets saturate the PD
+        # controller almost immediately. Start with a smaller target range.
+        action_scale = 0.1
         decimation = 4
 
     class asset(LeggedRobotCfg.asset):
         file = str(URDF_PATH)
         name = "train081801"
-        foot_name = "link"
+        # Match only foot1_link ... foot4_link, not every body ending in link.
+        foot_name = "foot"
         penalize_contacts_on = ["base_link"]
         terminate_after_contacts_on = ["base_link"]
         dof_names = ["hip_joint", "knee_joint", "foot_joint", "hip3_joint", "knee3_joint", "foot3_joint", "hip2_joint", "knee2_joint", "foot2_joint", "hip4_joint", "knee4_joint", "foot4_joint"]
@@ -97,40 +103,46 @@ class Train081801Cfg(LeggedRobotCfg):
         curriculum = False
         max_curriculum = 1.0
         num_commands = 3
-        resampling_time = 10.0
+        resampling_time = 5.0
         heading_command = False
+        zero_cmd_prob = 0.1
 
         class ranges(LeggedRobotCfg.commands.ranges):
-            lin_vel_x = [-0.1, 0.1]
-            lin_vel_y = [-0.1, 0.1]
-            ang_vel_yaw = [-0.1, 0.1]
+            # Stage 1: learn forward/backward locomotion on flat ground. The
+            # previous +/-0.1 commands were all removed by the framework's
+            # small-command threshold (norm <= 0.2).
+            lin_vel_x = [-0.6, 0.6]
+            lin_vel_y = [0.0, 0.0]
+            ang_vel_yaw = [0.0, 0.0]
 
     class domain_rand(LeggedRobotCfg.domain_rand):
-        randomize_friction = True
-        friction_range = [0.6, 1.2]
+        # First learn a nominal gait; robustness randomization can be enabled
+        # after the policy walks reliably.
+        randomize_friction = False
+        friction_range = [0.8, 1.2]
         randomize_base_mass = False
         push_robots = False
 
     class rewards(LeggedRobotCfg.rewards):
         soft_dof_pos_limit = 0.9
-        base_height_target = 0.98
+        base_height_target = 0.15
 
         class scales(LeggedRobotCfg.rewards.scales):
-            termination = 0
-            tracking_lin_vel = 1
+            termination = -2.0
+            tracking_lin_vel = 2.0
             tracking_ang_vel = 0.5
-            lin_vel_z = -2
-            ang_vel_xy = -0.05
-            orientation = -1
-            torques = -0.00001
-            dof_vel = 0
+            lin_vel_z = -2.0
+            ang_vel_xy = -0.1
+            orientation = -2.0
+            torques = -0.0001
+            dof_vel = 0.0
             dof_acc = -2.5e-7
-            base_height = -1
-            feet_air_time = 1
-            collision = -1
-            feet_stumble = 0
-            action_rate = -0.01
-            stand_still = 0
+            base_height = -2.0
+            feet_air_time = 0.5
+            collision = -1.0
+            feet_stumble = 0.0
+            action_rate = -0.02
+            stand_still = 0.0
             custom_reward = 0.0
 
     class normalization(LeggedRobotCfg.normalization):
@@ -142,7 +154,8 @@ class Train081801Cfg(LeggedRobotCfg):
             height_measurements = 5.0
 
     class noise(LeggedRobotCfg.noise):
-        add_noise = True
+        # Enable observation noise only after the nominal walking task works.
+        add_noise = False
         noise_level = 1.0
 
     class sim(LeggedRobotCfg.sim):
